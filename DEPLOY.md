@@ -1,75 +1,78 @@
-# Guía de despliegue — Centro de Control
+# Guía de despliegue en Vercel — Centro de Control
 
-Objetivo: que el equipo entre desde un **enlace** (móvil/escritorio), gratis. Requiere 2 cuentas tuyas: **GitHub** y un hosting (**Cloudflare Pages** o **Netlify** — sus planes gratis permiten uso comercial; el gratis de Vercel no).
+Objetivo: que el equipo entre por un **enlace** desde cualquier lugar. Necesitas 2 cuentas: **GitHub** y **Vercel** (con el mismo correo es más fácil).
 
-Yo (el agente) puedo preparar los archivos y comandos; los **logins y clics finales los haces tú** por seguridad.
+> Nota: el plan gratis de Vercel (Hobby) es para uso **no comercial**. Para empresa, Vercel pide el plan **Pro** (~US$20/mes). Alternativas gratis aptas para comercial: Cloudflare Pages / Netlify.
+
+Los repos ya están inicializados y commiteados localmente (rama `main`). Faltan los pasos que requieren tu login.
 
 ---
 
-## Paso 1 — Subir la bóveda de contenido a GitHub (privado)
+## Paso 1 — Crear los 2 repos en GitHub (PRIVADOS)
 
-Desde la carpeta `IMAI` (la bóveda):
+Entra a https://github.com/new y crea **dos** repositorios **privados** y **vacíos** (sin README):
+1. **`intezia-fabrica-contenido`** — la bóveda de contenido (tiene datos confidenciales → privado obligatorio).
+2. **`intezia-control-center`** — la app.
 
+## Paso 2 — Subir el código
+
+**Opción fácil (GitHub Desktop):** abre GitHub Desktop → *File → Add local repository* → elige cada carpeta → *Publish repository* (marca **Keep this code private**).
+
+**Opción terminal:** en cada carpeta corre (reemplaza TU_USUARIO):
 ```bash
-git init
-git add .
-git commit -m "Fábrica de contenido Intezia — estado inicial"
-```
-
-Crea un repo **privado** en GitHub (ej. `intezia-fabrica-contenido`) y:
-
-```bash
+# En la carpeta IMAI (bóveda)
 git remote add origin https://github.com/TU_USUARIO/intezia-fabrica-contenido.git
-git branch -M main
 git push -u origin main
-```
 
-> Esto también permite que el agente haga commit de guiones nuevos y que la app los lea.
-
-## Paso 2 — Subir la app a GitHub (privado)
-
-Desde la carpeta `intezia-control-center`:
-
-```bash
-git init
-git add .
-git commit -m "Centro de Control — v1"
+# En la carpeta intezia-control-center (app)
 git remote add origin https://github.com/TU_USUARIO/intezia-control-center.git
-git branch -M main
 git push -u origin main
 ```
+La primera vez, Windows abrirá el navegador para iniciar sesión en GitHub (Git Credential Manager).
 
-## Paso 3 — Crear el token de GitHub (para que la app escriba)
+## Paso 3 — Token de GitHub (para que la app lea/escriba los guiones)
 
 GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**:
-- **Repository access:** solo el repo de contenido (`intezia-fabrica-contenido`).
+- **Token name:** `intezia-control-center`
+- **Repository access:** *Only select repositories* → **`intezia-fabrica-contenido`**.
 - **Permissions → Repository permissions → Contents:** `Read and write`.
-- Copia el token (empieza con `github_pat_...`). Es el valor de `GITHUB_TOKEN`.
+- Generar y **copiar** el token (`github_pat_...`).
 
-## Paso 4 — Desplegar en Cloudflare Pages (recomendado, gratis)
+## Paso 4 — Desplegar la app en Vercel
 
-1. Entra a Cloudflare → **Workers & Pages → Create → Pages → Connect to Git** → elige el repo `intezia-control-center`.
-2. Framework preset: **Next.js**. Build command `npm run build`. (Cloudflare aplica el adaptador de Next automáticamente.)
-3. En **Settings → Environment variables**, añade:
-   - `ACCESS_PASSCODE` = una clave fuerte para el equipo
-   - `GITHUB_TOKEN` = el token del paso 3
-   - `GITHUB_OWNER` = tu usuario/org
-   - `GITHUB_REPO` = `intezia-fabrica-contenido`
-   - `GITHUB_BRANCH` = `main`
-   - `GUIONES_DIR` = `05_Guiones`
-4. Deploy. Obtienes un enlace `https://intezia-control-center.pages.dev` → compártelo con el equipo + la clave.
+1. Entra a https://vercel.com → **Add New… → Project** → *Import Git Repository* → elige **`intezia-control-center`**.
+2. Framework: **Next.js** (lo detecta solo). No cambies Build/Output.
+3. Antes de *Deploy*, abre **Environment Variables** y añade estas 6:
 
-> **Alternativa Netlify:** Add new site → Import from Git → mismas variables de entorno. También gratis y apto comercial.
+| Name | Value |
+|---|---|
+| `ACCESS_PASSCODE` | una clave fuerte para el equipo (ej. la que definas) |
+| `GITHUB_TOKEN` | el token del paso 3 (`github_pat_...`) |
+| `GITHUB_OWNER` | tu usuario de GitHub |
+| `GITHUB_REPO` | `intezia-fabrica-contenido` |
+| `GITHUB_BRANCH` | `main` |
+| `GUIONES_DIR` | `05_Guiones` |
+
+4. Clic en **Deploy**. En ~1 min tendrás un enlace tipo `https://intezia-control-center.vercel.app`.
 
 ## Paso 5 — Comprobar
 
-- Abre el enlace → pide la clave → entra.
-- Mueve un guion de estado o cambia una fecha → recarga → persiste.
-- En GitHub, verás un commit nuevo en el repo de contenido ("actualizar … desde el centro de control").
+- Abre el enlace → pide la clave (`ACCESS_PASSCODE`) → entra.
+- Mueve un guion de estado o cambia la fecha de grabación → recarga → persiste.
+- En GitHub, en `intezia-fabrica-contenido`, verás un commit nuevo ("actualizar … desde el centro de control").
 
 ---
 
+## Después: cómo entran los guiones nuevos
+Cuando el agente (Claude Code) genere guiones en la bóveda local, súbelos con:
+```bash
+# En la carpeta IMAI
+git add 05_Guiones 03_Conocimiento 02_Fuentes
+git commit -m "guiones nuevos"
+git push
+```
+La app desplegada los mostrará al instante (los lee del repo).
+
 ## Notas
-- **Seguridad:** el token vive solo en las variables del hosting (no en el código). La app es privada por passcode.
-- **Upgrade opcional:** cambiar el passcode por login con Google restringido al dominio de Intezia (NextAuth) — se puede añadir después.
-- **El agente y el equipo comparten el mismo repo:** el agente añade guiones nuevos (aparecen en `borrador`); el equipo los produce desde la app.
+- **Seguridad:** el token vive solo en las variables de Vercel, nunca en el código. La app es privada por passcode.
+- Para cambiar la clave del equipo: Vercel → Project → Settings → Environment Variables → editar `ACCESS_PASSCODE` → *Redeploy*.
