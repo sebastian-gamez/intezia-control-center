@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0f1216;
+  color: #e6e9ef;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+}
+
+/* Estilo del cuerpo del guion renderizado (markdown) */
+.prose-guion h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+}
+.prose-guion h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.4rem;
+  color: #aeb7c4;
+}
+.prose-guion p {
+  margin: 0.4rem 0;
+  line-height: 1.6;
+}
+.prose-guion ul,
+.prose-guion ol {
+  margin: 0.4rem 0 0.4rem 1.1rem;
+  list-style: revert;
+}
+.prose-guion li {
+  margin: 0.2rem 0;
+}
+.prose-guion blockquote {
+  border-left: 3px solid #4f7cff;
+  padding: 0.2rem 0 0.2rem 0.8rem;
+  margin: 0.6rem 0;
+  color: #cbd3de;
+  background: #12161c;
+}
+.prose-guion hr {
+  border: 0;
+  border-top: 1px solid #232a33;
+  margin: 1rem 0;
+}
+.prose-guion code {
+  background: #12161c;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.prose-guion strong {
+  color: #fff;
+}
