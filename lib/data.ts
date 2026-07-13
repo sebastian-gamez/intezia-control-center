@@ -84,7 +84,14 @@ let _octokit: import("@octokit/rest").Octokit | null = null;
 async function ghOctokit() {
   if (_octokit) return _octokit;
   const { Octokit } = await import("@octokit/rest");
-  _octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+  _octokit = new Octokit({
+    auth: process.env.GITHUB_TOKEN,
+    request: {
+      // Fuerza lectura fresca: evita que Next.js/Vercel cachee la respuesta de GitHub.
+      fetch: (url: RequestInfo | URL, options?: RequestInit) =>
+        fetch(url, { ...options, cache: "no-store" }),
+    },
+  });
   return _octokit;
 }
 

@@ -4,6 +4,7 @@ import NewGuionButton from "@/components/NewGuionButton";
 import { KANBAN_ESTADOS } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 export default async function TableroPage() {
   const guiones = await listGuiones();

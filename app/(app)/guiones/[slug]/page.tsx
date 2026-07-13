@@ -7,6 +7,7 @@ import GuionEditor from "@/components/GuionEditor";
 import { EstadoBadge } from "@/components/badges";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 export default async function GuionDetail({
   params,
