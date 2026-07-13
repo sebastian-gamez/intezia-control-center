@@ -10,11 +10,13 @@ import {
 } from "@/lib/types";
 import { PilarChip } from "./badges";
 import { useGuionModal } from "./GuionModalProvider";
+import { useGuionFilters } from "./GuionFilters";
 import { patchGuion } from "@/lib/api";
 
 export default function Board({ guiones }: { guiones: Guion[] }) {
   const router = useRouter();
   const { open } = useGuionModal();
+  const { rows, controls, count, total } = useGuionFilters(guiones);
   const [dragSlug, setDragSlug] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,9 +29,16 @@ export default function Board({ guiones }: { guiones: Guion[] }) {
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4">
-      {KANBAN_ESTADOS.map((estado) => {
-        const items = guiones.filter((g) => g.estado === estado);
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {controls}
+        <span className="ml-auto self-center text-sm text-slate-400">
+          {count} de {total}
+        </span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-4">
+        {KANBAN_ESTADOS.map((estado) => {
+          const items = rows.filter((g) => g.estado === estado);
         const isOver = overCol === estado;
         return (
           <div
@@ -101,8 +110,9 @@ export default function Board({ guiones }: { guiones: Guion[] }) {
               )}
             </div>
           </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
