@@ -33,6 +33,18 @@ export default async function GuionDetail({
       <div className="mt-3 flex flex-col gap-5 lg:flex-row">
         <div className="min-w-0 flex-1">
           <div className="mb-3 flex flex-wrap items-center gap-2">
+            {guion.ticket ? (
+              <span className="rounded border border-line bg-panel px-2 py-0.5 font-mono text-xs text-slate-400">
+                {guion.ticket}
+              </span>
+            ) : (
+              <span
+                className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300"
+                title="Sin ticket: esta pieza no está enlazada con NocoDB. Corre .pipeline/importar.mjs"
+              >
+                sin ticket
+              </span>
+            )}
             <h1 className="text-xl font-semibold">{guion.titulo}</h1>
             <EstadoBadge estado={guion.estado} />
           </div>
@@ -48,9 +60,13 @@ export default async function GuionDetail({
               <span className="text-slate-500">Fuente:</span>{" "}
               {guion.fuente || "—"}
             </div>
-            <div>
+            <div className="mb-1">
               <span className="text-slate-500">Insight:</span>{" "}
               {guion.insight || "—"}
+            </div>
+            <div>
+              <span className="text-slate-500">Referencia de formato:</span>{" "}
+              {guion.referencia || "—"}
             </div>
           </div>
         </div>

@@ -191,6 +191,7 @@ export default function GuionModalProvider({
                   <div className="pt-3 text-xs text-slate-500">
                     <div>Fuente: {guion.fuente || "—"}</div>
                     <div>Insight: {guion.insight || "—"}</div>
+                    <div>Referencia: {guion.referencia || "—"}</div>
                   </div>
                 </div>
               </div>

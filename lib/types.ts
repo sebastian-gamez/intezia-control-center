@@ -1,30 +1,43 @@
 // Modelo de datos del guion (refleja el frontmatter de los .md de la fábrica)
 
-// El proceso en esta app llega hasta "grabado"; edición/publicación se llevan por otro lado.
+// Las 5 etapas canónicas del pipeline. Son EXACTAMENTE las que el equipo ya usa en
+// NocoDB: la app se adaptó a su vocabulario, no al revés.
+//
+// En el YAML de la bóveda van como slug (sin espacios ni acentos, para no romper
+// Dataview); la etiqueta es la que se ve en los dos sistemas. Este es el único sitio
+// donde vive ese mapeo — si cambia una etapa, se cambia aquí y nada más.
 export const ESTADOS = [
-  "idea",
   "borrador",
-  "aprobado",
-  "por_grabar",
-  "grabado",
+  "por_hacer",
+  "en_proceso",
+  "producido",
+  "publicado",
 ] as const;
 export type Estado = (typeof ESTADOS)[number];
 
 export const ESTADO_LABEL: Record<Estado, string> = {
-  idea: "💡 Idea",
-  borrador: "📝 Borrador",
-  aprobado: "✅ Aprobado",
-  por_grabar: "🎥 Por grabar",
-  grabado: "🔴 Grabado",
+  borrador: "Borrador",
+  por_hacer: "Por Hacer",
+  en_proceso: "En Proceso",
+  producido: "Producido",
+  publicado: "Publicado",
 };
 
-// Columnas del tablero (excluye idea, que es backlog)
-export const KANBAN_ESTADOS: Estado[] = [
-  "borrador",
-  "aprobado",
-  "por_grabar",
-  "grabado",
-];
+/** Etapas que la app muestra: lo vivo. Lo publicado se consulta en NocoDB. */
+export const ESTADOS_ACTIVOS: Estado[] = ["borrador", "por_hacer", "en_proceso", "producido"];
+
+// Columnas del tablero
+export const KANBAN_ESTADOS: Estado[] = ESTADOS_ACTIVOS;
+
+/** Vocabulario viejo → etapa canónica. Para leer .md que aún no se han migrado. */
+export const ESTADO_LEGADO: Record<string, Estado> = {
+  idea: "borrador",
+  borrador: "borrador",
+  aprobado: "por_hacer",
+  por_grabar: "por_hacer",
+  grabado: "en_proceso",
+  editado: "producido",
+};
 
 export const PILARES = [
   "casos",
@@ -45,7 +58,13 @@ export const PILAR_LABEL: Record<string, string> = {
   liderazgo: "Adopción y liderazgo",
 };
 
-export const VOCES = ["CEO", "COO", "CMO", "colaborador"] as const;
+export const VOCES = [
+  "CEO",
+  "COO",
+  "CMO",
+  "Head of Growth",
+  "colaborador",
+] as const;
 export const PLATAFORMAS = [
   "IG",
   "TikTok",
@@ -62,6 +81,7 @@ export interface Metricas {
 
 export interface Guion {
   slug: string; // nombre de archivo sin .md
+  ticket: string; // INT-0001 — la llave con NocoDB
   titulo: string;
   estado: Estado;
   pilar: string;
@@ -69,9 +89,11 @@ export interface Guion {
   plataforma: string;
   formato: string;
   duracion: string;
+  palabras_objetivo: number | null; // presupuesto de palabras habladas (ver Modelo de redacción)
   persona_audiencia: string;
   fuente: string;
   insight: string;
+  referencia: string; // ficha de Referencias-Video cuyo formato se imitó
   responsable: string; // productor/editor
   fecha_grabacion: string;
   fecha_produccion: string;
@@ -99,4 +121,7 @@ export type GuionPatch = Partial<
     | "duracion"
     | "persona_audiencia"
   >
->;
+> & {
+  // El formulario lo manda como texto; applyPatch lo guarda como número en el YAML.
+  palabras_objetivo?: number | string | null;
+};

@@ -13,6 +13,7 @@ const CAMPOS: (keyof GuionPatch)[] = [
   "fecha_publicacion",
   "cta",
   "duracion",
+  "palabras_objetivo",
   "persona_audiencia",
 ];
 

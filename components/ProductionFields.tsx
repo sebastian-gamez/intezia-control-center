@@ -63,6 +63,20 @@ export default function ProductionFields({
           placeholder="—"
         />
       </div>
+      <div className="grid grid-cols-2 gap-2">
+        <InputField
+          label="Duración"
+          value={form.duracion}
+          onChange={(v) => onField("duracion", v)}
+          placeholder="30s"
+        />
+        <InputField
+          label="Palabras objetivo"
+          value={form.palabras_objetivo}
+          onChange={(v) => onField("palabras_objetivo", v)}
+          placeholder="80"
+        />
+      </div>
       <DateField
         label="🎥 Fecha de grabación"
         value={form.fecha_grabacion}
@@ -90,6 +104,7 @@ export function toMetaForm(g: {
   fecha_publicacion: string;
   cta: string;
   duracion: string;
+  palabras_objetivo: number | null;
 }): MetaForm {
   return {
     estado: g.estado,
@@ -100,5 +115,7 @@ export function toMetaForm(g: {
     fecha_grabacion: g.fecha_grabacion,
     cta: g.cta,
     duracion: g.duracion,
+    palabras_objetivo:
+      g.palabras_objetivo === null ? "" : String(g.palabras_objetivo),
   };
 }

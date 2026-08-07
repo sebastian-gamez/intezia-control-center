@@ -1,7 +1,6 @@
 import { listGuiones, dataSource } from "@/lib/data";
 import Board from "@/components/Board";
 import NewGuionButton from "@/components/NewGuionButton";
-import { KANBAN_ESTADOS } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -10,12 +9,11 @@ export default async function TableroPage() {
   const guiones = await listGuiones();
   const src = dataSource();
 
-  const porGrabar = guiones.filter((g) => g.estado === "por_grabar").length;
   const borradores = guiones.filter((g) => g.estado === "borrador").length;
-  const grabados = guiones.filter((g) => g.estado === "grabado").length;
-  const activos = guiones.filter((g) =>
-    (KANBAN_ESTADOS as string[]).includes(g.estado)
-  ).length;
+  const porHacer = guiones.filter((g) => g.estado === "por_hacer").length;
+  const enProceso = guiones.filter((g) => g.estado === "en_proceso").length;
+  const producidos = guiones.filter((g) => g.estado === "producido").length;
+  const sinTicket = guiones.filter((g) => !g.ticket).length;
 
   return (
     <div className="px-5 py-5">
@@ -23,18 +21,24 @@ export default async function TableroPage() {
         <div>
           <h1 className="text-xl font-semibold">Tablero de producción</h1>
           <p className="text-sm text-slate-400">
-            {guiones.length} guiones · fuente de datos:{" "}
+            {guiones.length} guiones activos · fuente de datos:{" "}
             <span className={src === "local" ? "text-amber-400" : "text-emerald-400"}>
               {src === "local" ? "archivos locales (dev)" : "GitHub"}
             </span>{" "}
-            · arrastra las tarjetas para cambiar el estado
+            · arrastra las tarjetas para cambiar la etapa (se refleja en NocoDB)
+            {sinTicket > 0 && (
+              <span className="text-amber-400">
+                {" "}
+                · ⚠️ {sinTicket} sin ticket
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3 text-center text-sm">
-          <Stat label="Por aprobar" value={borradores} tone="amber" />
-          <Stat label="Por grabar" value={porGrabar} tone="sky" />
-          <Stat label="Grabados" value={grabados} tone="blue" />
-          <Stat label="Activos" value={activos} tone="slate" />
+          <Stat label="Borrador" value={borradores} tone="amber" />
+          <Stat label="Por Hacer" value={porHacer} tone="sky" />
+          <Stat label="En Proceso" value={enProceso} tone="blue" />
+          <Stat label="Producido" value={producidos} tone="slate" />
           <NewGuionButton />
         </div>
       </div>

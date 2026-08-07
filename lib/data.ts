@@ -5,8 +5,11 @@ import {
   applyPatch,
   newGuionRaw,
   slugFromTitle,
+  PLANTILLA_PATH,
 } from "./guion";
 import type { Guion, GuionPatch } from "./types";
+import { ESTADOS_ACTIVOS } from "./types";
+import { nocodbActivo, actualizarFila, crearFila, siguienteTicket } from "./nocodb";
 
 const GUIONES_DIR = process.env.GUIONES_DIR || "05_Guiones";
 const useGithub = !!process.env.GITHUB_TOKEN;
@@ -51,7 +54,18 @@ async function localUpdate(
   return parseGuion(slug, next);
 }
 
-async function localCreate(titulo: string): Promise<Guion> {
+/** Lee la plantilla oficial de la bóveda. Si no está, se usa el fallback de guion.ts. */
+async function localPlantilla(): Promise<string | null> {
+  const raiz = process.env.VAULT_PATH;
+  if (!raiz) return null;
+  try {
+    return await fs.readFile(path.join(raiz, PLANTILLA_PATH), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+async function localCreate(titulo: string, ticket = ""): Promise<Guion> {
   const base = slugFromTitle(titulo);
   const dir = vaultDir();
   let slug = base;
@@ -65,7 +79,7 @@ async function localCreate(titulo: string): Promise<Guion> {
   ) {
     slug = `${base} ${i++}`;
   }
-  const raw = newGuionRaw(titulo);
+  const raw = newGuionRaw(titulo, await localPlantilla(), ticket);
   await fs.writeFile(path.join(dir, `${slug}.md`), raw, "utf8");
   return parseGuion(slug, raw);
 }
@@ -184,7 +198,7 @@ async function githubUpdate(
   return parseGuion(slug, next);
 }
 
-async function githubCreate(titulo: string): Promise<Guion> {
+async function githubCreate(titulo: string, ticket = ""): Promise<Guion> {
   const octokit = await ghOctokit();
   const { owner, repo, branch } = ghCfg();
   const base = slugFromTitle(titulo);
@@ -197,7 +211,8 @@ async function githubCreate(titulo: string): Promise<Guion> {
     if (exists == null) break;
     slug = `${base} ${i++}`;
   }
-  const raw = newGuionRaw(titulo);
+  // Misma plantilla que en local: vive en el repo de la bóveda, no en el código.
+  const raw = newGuionRaw(titulo, await githubReadRaw(PLANTILLA_PATH), ticket);
   await octokit.repos.createOrUpdateFileContents({
     owner,
     repo,
@@ -230,10 +245,43 @@ async function githubDelete(slug: string): Promise<void> {
   });
 }
 
+// ---------- Puente con NocoDB ----------
+// Todos los cambios de la app desembocan aquí, así que este es el único sitio donde hay
+// que empujar a NocoDB. Si NocoDB falla, el .md ya se guardó: se avisa y el sync
+// programado reconcilia. Nunca se revierte una escritura local por un fallo de red.
+let ultimoAvisoSync: string | null = null;
+export function avisoSync(): string | null {
+  const a = ultimoAvisoSync;
+  ultimoAvisoSync = null;
+  return a;
+}
+
+async function empujarANocodb(g: Guion, patch: GuionPatch, cuerpo?: string) {
+  if (!nocodbActivo() || !g.ticket) return;
+  try {
+    await actualizarFila(g.ticket, {
+      estado: patch.estado,
+      fecha_publicacion: patch.fecha_publicacion,
+      fecha_grabacion: patch.fecha_grabacion,
+      slug: g.slug,
+      cuerpo,
+    });
+  } catch (e) {
+    ultimoAvisoSync = `Guardado en la bóveda, pero NocoDB no respondió (${
+      e instanceof Error ? e.message : "error"
+    }). El sync lo reconciliará.`;
+    console.warn("[nocodb]", ultimoAvisoSync);
+  }
+}
+
 // ---------- API pública ----------
 export async function listGuiones(): Promise<Guion[]> {
   const items = useGithub ? await githubList() : await localList();
-  return items.sort((a, b) => a.slug.localeCompare(b.slug));
+  // La app es para trabajar sobre lo vivo. Lo publicado se consulta en NocoDB, que es
+  // donde el equipo ya mira el histórico (261 piezas y subiendo).
+  return items
+    .filter((g) => (ESTADOS_ACTIVOS as string[]).includes(g.estado))
+    .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
 export async function getGuion(slug: string): Promise<Guion | null> {
@@ -245,13 +293,38 @@ export async function updateGuion(
   patch: GuionPatch,
   cuerpo?: string
 ): Promise<Guion> {
-  return useGithub
-    ? githubUpdate(slug, patch, cuerpo)
-    : localUpdate(slug, patch, cuerpo);
+  const g = useGithub
+    ? await githubUpdate(slug, patch, cuerpo)
+    : await localUpdate(slug, patch, cuerpo);
+  await empujarANocodb(g, patch, cuerpo);
+  return g;
 }
 
 export async function createGuion(titulo: string): Promise<Guion> {
-  return useGithub ? githubCreate(titulo) : localCreate(titulo);
+  // El ticket se pide ANTES de crear el archivo: si NocoDB no responde, el guion nace
+  // sin ticket y el sync se lo asigna después — pero nunca se queda sin crear.
+  let ticket = "";
+  if (nocodbActivo()) {
+    try {
+      ticket = await siguienteTicket();
+    } catch (e) {
+      console.warn("[nocodb] no se pudo pedir ticket:", e instanceof Error ? e.message : e);
+    }
+  }
+
+  const g = useGithub ? await githubCreate(titulo, ticket) : await localCreate(titulo, ticket);
+
+  if (ticket) {
+    try {
+      await crearFila({ ticket, nombre: g.titulo, estado: g.estado, slug: g.slug, voz: g.voz, pilar: g.pilar });
+    } catch (e) {
+      ultimoAvisoSync = `Guion creado, pero no se pudo registrar en NocoDB (${
+        e instanceof Error ? e.message : "error"
+      }).`;
+      console.warn("[nocodb]", ultimoAvisoSync);
+    }
+  }
+  return g;
 }
 
 export async function deleteGuion(slug: string): Promise<void> {
