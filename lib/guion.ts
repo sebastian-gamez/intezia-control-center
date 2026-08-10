@@ -110,7 +110,7 @@ export function slugFromTitle(titulo: string): string {
 }
 
 /** Ruta (dentro de la bóveda / del repo) de la plantilla oficial de guion. */
-export const PLANTILLA_PATH = "00_Sistema/Plantillas/Plantilla - Guion.md";
+export const PLANTILLA_PATH = "boveda/00_Sistema/Plantillas/Plantilla - Guion.md";
 
 /**
  * Contenido .md de un guion nuevo en blanco.
