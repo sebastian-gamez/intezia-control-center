@@ -47,7 +47,6 @@ GitHub → **Settings → Developer settings → Personal access tokens → Fine
 | Name | Value |
 |---|---|
 | `ACCESS_PASSCODE` | una clave fuerte para el equipo (ej. la que definas) |
-| `GITHUB_TOKEN` | el token del paso 3 (`github_pat_...`) |
 | `GITHUB_OWNER` | tu usuario de GitHub |
 | `GITHUB_REPO` | `intezia-fabrica-contenido` |
 | `GITHUB_BRANCH` | `main` |
@@ -76,3 +75,23 @@ La app desplegada los mostrará al instante (los lee del repo).
 ## Notas
 - **Seguridad:** el token vive solo en las variables de Vercel, nunca en el código. La app es privada por passcode.
 - Para cambiar la clave del equipo: Vercel → Project → Settings → Environment Variables → editar `ACCESS_PASSCODE` → *Redeploy*.
+
+
+---
+
+## Variables en Vercel (lo mínimo para que funcione)
+
+| Variable | Qué es |
+|---|---|
+| `ACCESS_PASSCODE` | la clave del equipo. **Larga y aleatoria** — es lo único que protege la app |
+| `NOCODB_BASE_URL` | la URL de tu NocoDB |
+| `NOCODB_TOKEN` | token de NocoDB con permiso sobre la tabla `Contenido` |
+| `NOCODB_CONTENIDO_TABLE_ID` | id de la tabla `Contenido` (se copia de la URL al abrirla) |
+| `NOCODB_LOG_TABLE_ID` | id de `Contenido — Log de etapas` |
+
+Opcional: `GITHUB_TOKEN` + `GITHUB_OWNER` + `GITHUB_REPO` si quieres que "+ Nuevo guion"
+use la plantilla que vive en la bóveda. Sin eso usa una plantilla de respaldo.
+
+⚠️ Cambiar una variable **no aplica sola**: hay que redesplegar.
+
+⚠️ Este repo es público. **Nunca** pongas un valor real en `.env.local.example`.

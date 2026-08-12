@@ -1,16 +1,22 @@
 # Centro de Control — Intezia
 
 App web interna para gestionar la **producción de guiones** de la fábrica de contenido de IA.
-Es una capa visual (tipo Notion) sobre los mismos archivos `.md` que genera el agente. **No duplica datos**: lee y escribe los guiones directamente.
+
+**Los guiones viven en NocoDB**, no en este repositorio. Este repo es público —para que
+Vercel lo despliegue— y contiene solo código: ni un guion, ni una credencial. La app lee
+y escribe la tabla `Contenido`, que es la única fuente de verdad para el equipo.
+
+La bóveda de Obsidian (donde el agente escribe los guiones con el modelo de ritmo) vive
+en un repositorio **privado** aparte y empuja su contenido a esa misma tabla.
 
 ## Qué hace
 
-- **Tablero** (Kanban) por estado: `borrador → aprobado → por_grabar → grabado → editado → publicado`.
+- **Tablero** (Kanban) por etapa: `Borrador → Por Hacer → En Proceso → Producido → Publicado`, las mismas que usa el equipo en NocoDB.
 - **Todos los guiones**: tabla con filtros (estado, pilar, voz, plataforma, responsable) y búsqueda.
 - **Grabaciones**: cola por ejecutivo en cámara (`voz`), con fecha de grabación.
 - **Calendario**: grabaciones 🎥 y publicaciones 🚀 por fecha.
 - **Aprendizajes**: publicados ordenados por *saves* (atribución sobre vanidad).
-- **Detalle de guion**: cuerpo renderizado + ficha de producción editable (estado, responsable, voz, fechas, CTA). Al guardar, **escribe de vuelta el `.md`**.
+- **Detalle de guion**: vista **🎙️ Para grabar** —solo lo que se dice en cámara— con un interruptor al guion completo. Ficha de producción editable; al guardar escribe en NocoDB.
 - **Acceso** protegido por una clave compartida del equipo.
 
 Roles: **`voz`** = ejecutivo en cámara (CEO/COO/CMO) · **`responsable`** = productor/editor.

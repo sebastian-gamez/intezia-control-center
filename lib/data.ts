@@ -10,9 +10,14 @@ import {
 import type { Guion, GuionPatch } from "./types";
 import { ESTADOS_ACTIVOS } from "./types";
 import { nocodbActivo, actualizarFila, crearFila, siguienteTicket } from "./nocodb";
+import * as noco from "./adaptador-nocodb";
 
 const GUIONES_DIR = process.env.GUIONES_DIR || "05_Guiones";
 const useGithub = !!process.env.GITHUB_TOKEN;
+// Los guiones viven en NocoDB. Es el modo normal en producción: el repo de la app es
+// público y no puede llevar contenido. Los adaptadores de git y de archivos se quedan
+// para trabajar en local contra la bóveda.
+const useNocodb = noco.nocodbDisponible() && process.env.FUENTE_GUIONES !== "git";
 
 // ---------- Adaptador LOCAL (archivos) ----------
 function vaultDir(): string {
@@ -300,6 +305,16 @@ async function empujarANocodb(g: Guion, patch: GuionPatch, cuerpo?: string) {
 
 // ---------- API pública ----------
 export async function listGuiones(): Promise<Guion[]> {
+  if (useNocodb) {
+    try {
+      ultimoError = null;
+      return await noco.listar();
+    } catch (e) {
+      ultimoError = (e as Error).message;
+      console.error("[guiones]", ultimoError);
+      return [];
+    }
+  }
   const items = useGithub ? await githubList() : await localList();
   // La app es para trabajar sobre lo vivo. Lo publicado se consulta en NocoDB, que es
   // donde el equipo ya mira el histórico (261 piezas y subiendo).
@@ -309,6 +324,7 @@ export async function listGuiones(): Promise<Guion[]> {
 }
 
 export async function getGuion(slug: string): Promise<Guion | null> {
+  if (useNocodb) return noco.obtener(slug);
   return useGithub ? githubGet(slug) : localGet(slug);
 }
 
@@ -317,6 +333,8 @@ export async function updateGuion(
   patch: GuionPatch,
   cuerpo?: string
 ): Promise<Guion> {
+  // En NocoDB la escritura es directa: la tabla es la fuente, no una copia.
+  if (useNocodb) return noco.actualizar(slug, patch, cuerpo);
   const g = useGithub
     ? await githubUpdate(slug, patch, cuerpo)
     : await localUpdate(slug, patch, cuerpo);
@@ -325,6 +343,17 @@ export async function updateGuion(
 }
 
 export async function createGuion(titulo: string): Promise<Guion> {
+  if (useNocodb) {
+    // La plantilla vive en la bóveda, que es su única fuente de verdad. Si no se puede
+    // leer (repo privado sin token), se usa el scaffold de guion.ts.
+    let plantilla = "";
+    try {
+      plantilla = (await githubReadRaw(PLANTILLA_PATH)) || "";
+    } catch {
+      /* sin plantilla: se cae al scaffold */
+    }
+    return noco.crear(titulo, plantilla || newGuionRaw(titulo));
+  }
   // El ticket se pide ANTES de crear el archivo: si NocoDB no responde, el guion nace
   // sin ticket y el sync se lo asigna después — pero nunca se queda sin crear.
   let ticket = "";
@@ -352,10 +381,12 @@ export async function createGuion(titulo: string): Promise<Guion> {
 }
 
 export async function deleteGuion(slug: string): Promise<void> {
+  if (useNocodb) return noco.eliminar(slug);
   return useGithub ? githubDelete(slug) : localDelete(slug);
 }
 
 export async function duplicateGuion(slug: string): Promise<Guion> {
+  if (useNocodb) return noco.duplicar(slug);
   const orig = useGithub ? await githubGet(slug) : await localGet(slug);
   if (!orig) throw new Error("Guion no encontrado.");
   const nuevo = await createGuion(`${orig.titulo} (copia)`);
