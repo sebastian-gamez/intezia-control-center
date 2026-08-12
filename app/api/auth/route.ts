@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const passcode = process.env.ACCESS_PASSCODE;
+  // Se recortan espacios en los dos lados. Es la causa más común de "la clave es
+  // correcta y no entra": un espacio al final del valor en Vercel, o pegado al copiar.
+  const passcode = (process.env.ACCESS_PASSCODE || "").trim();
   const { code } = await req.json().catch(() => ({ code: "" }));
+  const enviado = String(code || "").trim();
 
-  if (!passcode || code !== passcode) {
-    return NextResponse.json({ ok: false }, { status: 401 });
+  // Sin passcode configurado el middleware deja pasar a todo el mundo, así que el
+  // login no debe dar un 401 confuso: se dice qué falta.
+  if (!passcode) {
+    return NextResponse.json(
+      { ok: false, error: "No hay ACCESS_PASSCODE configurado en el servidor." },
+      { status: 500 }
+    );
+  }
+  if (enviado !== passcode) {
+    return NextResponse.json({ ok: false, error: "Clave incorrecta." }, { status: 401 });
   }
 
   const res = NextResponse.json({ ok: true });

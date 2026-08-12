@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginForm() {
   const [code, setCode] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const params = useSearchParams();
@@ -13,7 +13,7 @@ export default function LoginForm() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(false);
+    setError("");
     const res = await fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -24,7 +24,10 @@ export default function LoginForm() {
       router.push(params.get("from") || "/");
       router.refresh();
     } else {
-      setError(true);
+      // El servidor distingue "clave incorrecta" de "no hay clave configurada".
+      // Mostrar el motivo real evita horas buscando el error donde no está.
+      const msg = await res.json().then((d) => d?.error).catch(() => null);
+      setError(msg || "Clave incorrecta.");
     }
   }
 
@@ -53,7 +56,7 @@ export default function LoginForm() {
         className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm outline-none focus:border-brand"
         placeholder="••••••••"
       />
-      {error && <p className="mt-2 text-sm text-rose-400">Clave incorrecta.</p>}
+      {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
       <button
         type="submit"
         disabled={loading}

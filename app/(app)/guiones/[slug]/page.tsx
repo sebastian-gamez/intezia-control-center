@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { getGuion } from "@/lib/data";
+import VistaGuion from "@/components/VistaGuion";
 import GuionEditor from "@/components/GuionEditor";
 import { EstadoBadge } from "@/components/badges";
 
@@ -48,9 +47,7 @@ export default async function GuionDetail({
             <h1 className="text-xl font-semibold">{guion.titulo}</h1>
             <EstadoBadge estado={guion.estado} />
           </div>
-          <article className="prose-guion max-w-none rounded-xl border border-line bg-panel/40 p-5">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{cuerpo}</ReactMarkdown>
-          </article>
+          <VistaGuion cuerpo={cuerpo} />
         </div>
 
         <div className="w-full lg:w-80 lg:shrink-0">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Protege toda la app con el passcode compartido, salvo /login y /api/auth.
 export function middleware(req: NextRequest) {
-  const passcode = process.env.ACCESS_PASSCODE;
+  const passcode = (process.env.ACCESS_PASSCODE || "").trim();
   // Si no se configuró passcode, no bloquear (modo abierto).
   if (!passcode) return NextResponse.next();
 

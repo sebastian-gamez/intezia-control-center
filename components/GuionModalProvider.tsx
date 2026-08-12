@@ -8,8 +8,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import VistaGuion from "./VistaGuion";
 import type { Guion } from "@/lib/types";
 import {
   fetchGuion,
@@ -166,11 +165,10 @@ export default function GuionModalProvider({
                   </div>
                   <div className="min-h-0 flex-1 overflow-auto p-4">
                     {tab === "vista" ? (
-                      <article className="prose-guion max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {body}
-                        </ReactMarkdown>
-                      </article>
+                      // La vista de lectura filtra a lo que se dice en cámara; la
+                      // pestaña "Editar texto" sigue mostrando el guion entero, que es
+                      // lo que se guarda.
+                      <VistaGuion cuerpo={body} />
                     ) : (
                       <textarea
                         value={body}
