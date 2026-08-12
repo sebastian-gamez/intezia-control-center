@@ -116,15 +116,39 @@ function ghCfg() {
   return { owner, repo, branch };
 }
 
+/**
+ * Última causa por la que no se pudieron leer los guiones. Una variable de entorno mal
+ * puesta no puede tumbar la app entera con un error opaco: se degrada a lista vacía y
+ * la pantalla dice qué revisar.
+ */
+let ultimoError: string | null = null;
+export function errorDeLectura() {
+  return ultimoError;
+}
+
 async function githubList(): Promise<Guion[]> {
   const octokit = await ghOctokit();
   const { owner, repo, branch } = ghCfg();
-  const { data } = await octokit.repos.getContent({
-    owner,
-    repo,
-    path: GUIONES_DIR,
-    ref: branch,
-  });
+  let data;
+  try {
+    ({ data } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: GUIONES_DIR,
+      ref: branch,
+    }));
+    ultimoError = null;
+  } catch (e) {
+    const status = (e as { status?: number })?.status;
+    ultimoError =
+      status === 404
+        ? `No se encontró "${GUIONES_DIR}" en ${owner}/${repo} (rama ${branch}). Revisa GITHUB_REPO y GUIONES_DIR — y que el GITHUB_TOKEN tenga acceso a ese repo si es privado.`
+        : status === 401 || status === 403
+        ? `GitHub rechazó el token (${status}) al leer ${owner}/${repo}. Revisa GITHUB_TOKEN y sus permisos.`
+        : `No se pudo leer ${owner}/${repo}/${GUIONES_DIR}: ${(e as Error).message}`;
+    console.error("[guiones]", ultimoError);
+    return [];
+  }
   if (!Array.isArray(data)) return [];
   const mds = data.filter((d) => d.type === "file" && d.name.endsWith(".md"));
   // Descarga de contenidos en paralelo (evita N+1 en serie).

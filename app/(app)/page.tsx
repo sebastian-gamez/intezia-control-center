@@ -1,4 +1,4 @@
-import { listGuiones, dataSource } from "@/lib/data";
+import { listGuiones, dataSource, errorDeLectura } from "@/lib/data";
 import Board from "@/components/Board";
 import NewGuionButton from "@/components/NewGuionButton";
 
@@ -8,6 +8,7 @@ export const fetchCache = "force-no-store";
 export default async function TableroPage() {
   const guiones = await listGuiones();
   const src = dataSource();
+  const fallo = errorDeLectura();
 
   const borradores = guiones.filter((g) => g.estado === "borrador").length;
   const porHacer = guiones.filter((g) => g.estado === "por_hacer").length;
@@ -17,6 +18,18 @@ export default async function TableroPage() {
 
   return (
     <div className="px-5 py-5">
+      {fallo && (
+        <div className="mb-4 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4">
+          <p className="text-sm font-medium text-rose-200">
+            No se pudieron leer los guiones
+          </p>
+          <p className="mt-1 text-sm text-rose-300/90">{fallo}</p>
+          <p className="mt-2 text-xs text-rose-300/70">
+            La app sigue en pie; solo está sin datos. Se arregla en las variables de
+            entorno de Vercel y un redeploy.
+          </p>
+        </div>
+      )}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Tablero de producción</h1>
