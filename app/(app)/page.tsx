@@ -13,6 +13,7 @@ export default async function TableroPage() {
   const borradores = guiones.filter((g) => g.estado === "borrador").length;
   const porHacer = guiones.filter((g) => g.estado === "por_hacer").length;
   const enProceso = guiones.filter((g) => g.estado === "en_proceso").length;
+  const enRevision = guiones.filter((g) => g.estado === "revision").length;
   const producidos = guiones.filter((g) => g.estado === "producido").length;
   const sinTicket = guiones.filter((g) => !g.ticket).length;
 
@@ -51,6 +52,7 @@ export default async function TableroPage() {
           <Stat label="Borrador" value={borradores} tone="amber" />
           <Stat label="Por Hacer" value={porHacer} tone="sky" />
           <Stat label="En Proceso" value={enProceso} tone="blue" />
+          <Stat label="Revisión" value={enRevision} tone="fuchsia" />
           <Stat label="Producido" value={producidos} tone="slate" />
           <NewGuionButton />
         </div>
@@ -74,6 +76,7 @@ function Stat({
     amber: "text-amber-300",
     sky: "text-sky-300",
     blue: "text-blue-300",
+    fuchsia: "text-fuchsia-300",
     slate: "text-slate-200",
   };
   return (

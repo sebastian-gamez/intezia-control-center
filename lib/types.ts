@@ -1,15 +1,23 @@
 // Modelo de datos del guion (refleja el frontmatter de los .md de la fábrica)
 
-// Las 5 etapas canónicas del pipeline. Son EXACTAMENTE las que el equipo ya usa en
-// NocoDB: la app se adaptó a su vocabulario, no al revés.
+// Las etapas canónicas del pipeline. En el YAML de la bóveda van como slug (sin espacios
+// ni acentos, para no romper Dataview); la etiqueta es la que se ve en los dos sistemas.
+// Este es el único sitio donde vive ese mapeo — si cambia una etapa, se cambia aquí y
+// nada más (columnas del tablero, filtros, selectores y badges salen de esta lista).
 //
-// En el YAML de la bóveda van como slug (sin espacios ni acentos, para no romper
-// Dataview); la etiqueta es la que se ve en los dos sistemas. Este es el único sitio
-// donde vive ese mapeo — si cambia una etapa, se cambia aquí y nada más.
+// "Revisión" es la puerta que faltaba: nada pasa de escribirse a producirse sin que otra
+// persona lo lea. Antes se iba de "En Proceso" a "Producido" sin control de par, y los
+// errores de redacción solo aparecían con el video ya grabado.
+//
+// ⚠️ Requiere un cambio de una línea EN NOCODB (fuera de este repo): añadir la opción
+// "Revisión" al select `Estado` de la tabla `Contenido`. Hasta que se añada, lo único que
+// falla es mover una pieza a esa etapa (con aviso en pantalla); el resto del pipeline
+// sigue igual.
 export const ESTADOS = [
   "borrador",
   "por_hacer",
   "en_proceso",
+  "revision",
   "producido",
   "publicado",
 ] as const;
@@ -19,12 +27,19 @@ export const ESTADO_LABEL: Record<Estado, string> = {
   borrador: "Borrador",
   por_hacer: "Por Hacer",
   en_proceso: "En Proceso",
+  revision: "Revisión",
   producido: "Producido",
   publicado: "Publicado",
 };
 
 /** Etapas que la app muestra: lo vivo. Lo publicado se consulta en NocoDB. */
-export const ESTADOS_ACTIVOS: Estado[] = ["borrador", "por_hacer", "en_proceso", "producido"];
+export const ESTADOS_ACTIVOS: Estado[] = [
+  "borrador",
+  "por_hacer",
+  "en_proceso",
+  "revision",
+  "producido",
+];
 
 // Columnas del tablero
 export const KANBAN_ESTADOS: Estado[] = ESTADOS_ACTIVOS;
