@@ -42,7 +42,8 @@ GitHub → **Settings → Developer settings → Personal access tokens → Fine
 
 1. Entra a https://vercel.com → **Add New… → Project** → *Import Git Repository* → elige **`intezia-control-center`**.
 2. Framework: **Next.js** (lo detecta solo). No cambies Build/Output.
-3. Antes de *Deploy*, abre **Environment Variables** y añade estas 6:
+3. Antes de *Deploy*, abre **Environment Variables** y añade estas 6 (más `SESSION_SECRET`,
+   opcional pero recomendada — ver la tabla completa más abajo):
 
 | Name | Value |
 |---|---|
@@ -84,13 +85,15 @@ La app desplegada los mostrará al instante (los lee del repo).
 | Variable | Qué es |
 |---|---|
 | `ACCESS_PASSCODE` | la clave del equipo. **Larga y aleatoria** — es lo único que protege la app |
+| `SESSION_SECRET` | opcional. Clave con la que se firma la cookie de sesión (ver Paso 4). Si falta, se deriva de `ACCESS_PASSCODE` — ponla si quieres poder rotar una sin la otra |
 | `NOCODB_BASE_URL` | la URL de tu NocoDB |
 | `NOCODB_TOKEN` | token de NocoDB con permiso sobre la tabla `Contenido` |
 | `NOCODB_CONTENIDO_TABLE_ID` | id de la tabla `Contenido` (se copia de la URL al abrirla) |
 | `NOCODB_LOG_TABLE_ID` | id de `Contenido — Log de etapas` |
 
-Opcional: `GITHUB_TOKEN` + `GITHUB_OWNER` + `GITHUB_REPO` si quieres que "+ Nuevo guion"
-use la plantilla que vive en la bóveda. Sin eso usa una plantilla de respaldo.
+`GITHUB_TOKEN` + `GITHUB_OWNER` + `GITHUB_REPO`: **ahora obligatorias** para "+ Nuevo guion".
+Antes, si faltaban, la app usaba en silencio una plantilla de respaldo desactualizada; ahora
+la creación falla con un error explícito en vez de crear guiones con la estructura vieja.
 
 ⚠️ Cambiar una variable **no aplica sola**: hay que redesplegar.
 
