@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useGuionModal } from "./GuionModalProvider";
 import { createGuion } from "@/lib/api";
 
@@ -14,10 +15,15 @@ export default function NewGuionButton() {
     const titulo = prompt("Título del nuevo guion:", "Nuevo guion");
     if (titulo == null) return;
     setBusy(true);
-    const g = await createGuion(titulo.trim() || "Nuevo guion");
-    setBusy(false);
-    router.refresh();
-    if (g?.slug) open(g.slug);
+    try {
+      const g = await createGuion(titulo.trim() || "Nuevo guion");
+      router.refresh();
+      if (g?.slug) open(g.slug);
+    } catch (e) {
+      toast.error(`No se pudo crear: ${e instanceof Error ? e.message : "error"}`);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
