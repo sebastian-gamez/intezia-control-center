@@ -1,6 +1,7 @@
 import matter from "gray-matter";
 import type { Guion, GuionPatch, Estado } from "./types";
 import { ESTADO_LEGADO, ESTADOS } from "./types";
+import { ErrorDeEntrada } from "./validacion";
 
 function str(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -109,91 +110,48 @@ export function slugFromTitle(titulo: string): string {
   );
 }
 
+/**
+ * Un slug nombra un archivo DENTRO de la carpeta de guiones y nada más. Sin este filtro,
+ * un slug como `../../.env` convierte cualquier ruta de la API en lectura o escritura
+ * arbitraria de disco.
+ */
+export function slugSeguro(slug: string): string {
+  const s = String(slug ?? "").trim();
+  const invalido =
+    !s ||
+    s.length > 200 ||
+    s.startsWith(".") || // nada de dotfiles
+    s.includes("..") || // nada de subir de carpeta
+    /[\\/]/.test(s) || // nada de separadores de ruta
+    // eslint-disable-next-line no-control-regex
+    /[\u0000-\u001f]/.test(s); // nada de bytes de control
+  if (invalido) throw new ErrorDeEntrada("Identificador de guion inválido.");
+  return s;
+}
+
 /** Ruta (dentro de la bóveda / del repo) de la plantilla oficial de guion. */
 export const PLANTILLA_PATH = "boveda/00_Sistema/Plantillas/Plantilla - Guion.md";
 
 /**
- * Contenido .md de un guion nuevo en blanco.
+ * Contenido .md de un guion nuevo, a partir de la plantilla oficial.
  *
- * La plantilla REAL vive en la bóveda (`PLANTILLA_PATH`) y es la única fuente de
- * verdad: el equipo la edita en Obsidian y la app debe respetarla. Por eso
- * `data.ts` la lee y la pasa aquí; lo único que hacemos es sustituir {{title}}.
+ * La plantilla REAL vive en la bóveda (`PLANTILLA_PATH`) y es su única fuente de verdad:
+ * el equipo la edita en Obsidian y la app debe respetarla.
  *
- * El scaffold de abajo es solo el plan B para cuando la plantilla no se puede
- * leer. Antes era la única versión y se desincronizó de la de la bóveda sin que
- * nadie lo notara — por eso ahora es un fallback y no el camino normal.
+ * Antes había aquí una copia de respaldo que se usaba en silencio si la plantilla no se
+ * podía leer. Se desincronizó de la de la bóveda sin que nadie lo notara y se estuvieron
+ * creando guiones con la estructura vieja. Ahora, si no hay plantilla, la creación falla
+ * y dice qué revisar: mejor no crear el guion que crearlo mal.
  */
 export function newGuionRaw(titulo: string, plantilla?: string | null, ticket = ""): string {
-  if (plantilla && plantilla.trim()) {
-    const out = plantilla.replace(/\{\{\s*title\s*\}\}/g, titulo);
-    // El ticket es la llave con NocoDB: se escribe justo bajo `type` para que quede
-    // arriba del todo y sea lo primero que se ve al abrir el archivo.
-    return ticket ? out.replace(/^type: guion$/m, `type: guion\nticket: ${ticket}`) : out;
+  if (!plantilla || !plantilla.trim()) {
+    throw new Error(
+      `No se pudo leer la plantilla oficial (${PLANTILLA_PATH}). Revisa VAULT_PATH ` +
+        `(o GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO) antes de crear guiones.`
+    );
   }
-
-  const data = {
-    type: "guion",
-    ticket,
-    estado: "borrador",
-    pilar: "",
-    voz: "",
-    plataforma: "",
-    formato: "reel",
-    duracion: "30s",
-    palabras_objetivo: 80,
-    persona_audiencia: "",
-    fuente: "",
-    insight: "",
-    referencia: "",
-    responsable: "",
-    fecha_grabacion: "",
-    fecha_produccion: "",
-    fecha_publicacion: "",
-    cta: "valor",
-    metricas: { views: "", saves: "", shares: "" },
-    pipeline: "",
-    tags: ["guion"],
-  };
-  const body = `# ${titulo}
-
-## 🎣 HOOKS (elige 1 al grabar)
-> 8-12 palabras. Cero preámbulo.
-1.
-2.
-3.
-
-## 🎬 GUION HABLADO (leer en voz alta con cronómetro)
-
-| t | beat | texto a decir | pal. |
-|---|---|---|---|
-| 0-2 s | **hook** | | |
-| 2-6 s | contexto | | |
-| 6-20 s | **valor** | | |
-| 20-27 s | prueba | | |
-| 27-30 s | gancho + firma | | |
-
-**Total: ___ / ___ palabras objetivo**
-
-## ⭐ El valor, desglosado
-1.
-2.
-3.
-
-## 🔖 Gancho de acción
-> "Guarda esto para…" / "Envíaselo a quien…"
-
-## ✍️ Firma
-Nombre — Cargo de Intezia.
-
----
-
-### Producción
-- **Texto en pantalla:**
-- **Caption:**
-- **Hashtags:**
-- **Nota visual / b-roll:**
-`;
-  let out = matter.stringify(body, data);
-  out = out.replace(/:\s*(''|"")\s*$/gm, ": ");
-  return out;
+  const out = plantilla.replace(/\{\{\s*title\s*\}\}/g, titulo);
+  // El ticket es la llave con NocoDB: se escribe justo bajo `type` para que quede
+  // arriba del todo y sea lo primero que se ve al abrir el archivo.
+  return ticket ? out.replace(/^type: guion$/m, `type: guion\nticket: ${ticket}`) : out;
 }
