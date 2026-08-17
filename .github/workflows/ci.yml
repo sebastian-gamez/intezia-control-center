@@ -1,0 +1,27 @@
+name: CI
+
+# Nada llega a producción sin pasar por aquí: hasta ahora un error de tipos o de
+# compilación solo se descubría en el deploy de Vercel.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    env:
+      # Valores de mentira: el build solo necesita que las variables existan. Los reales
+      # viven en Vercel.
+      ACCESS_PASSCODE: ci-passcode-de-mentira
+      SESSION_SECRET: ci-session-secret-de-mentira
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
