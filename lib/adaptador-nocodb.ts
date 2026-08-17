@@ -13,6 +13,7 @@
 
 import type { Guion, GuionPatch, Estado } from "./types";
 import { ESTADOS, ESTADO_LABEL, ESTADO_LEGADO, ESTADOS_ACTIVOS } from "./types";
+import { enColaDeTickets, siguienteTicket, type FilaNocodb } from "./nocodb";
 
 const BASE = (process.env.NOCODB_BASE_URL || "").replace(/\/+$/, "");
 const TOKEN = process.env.NOCODB_TOKEN || "";
@@ -22,7 +23,8 @@ export function nocodbDisponible(): boolean {
   return Boolean(BASE && TOKEN && TABLA);
 }
 
-type Fila = Record<string, any>;
+/** La fila cruda de la tabla, definida una sola vez en `nocodb.ts`. */
+type Fila = FilaNocodb;
 
 async function api(ruta: string, method = "GET", body?: unknown) {
   const r = await fetch(new URL(ruta, BASE), {
@@ -162,29 +164,24 @@ export async function actualizar(
   return actualizado;
 }
 
-/** Siguiente ticket libre. Se calcula sobre la tabla, que es la única fuente. */
-async function siguienteTicket(filas: Fila[]): Promise<string> {
-  const max = filas.reduce((m, f) => {
-    const n = Number(txt(f.Ticket).match(/^INT-(\d+)$/)?.[1] || 0);
-    return n > m ? n : m;
-  }, 0);
-  return `INT-${String(max + 1).padStart(4, "0")}`;
-}
-
 export async function crear(titulo: string, plantilla: string): Promise<Guion> {
-  const filas = await todas();
-  const ticket = await siguienteTicket(filas);
-  await api(`/api/v2/tables/${TABLA}/records`, "POST", [
-    {
-      Ticket: ticket,
-      Nombre: titulo,
-      Estado: ESTADO_LABEL.borrador,
-      "Tipo de pieza": "Social",
-      Origen: "Nuevo",
-      CTA: "valor",
-      "Guión": plantilla.replace(/\{\{\s*title\s*\}\}/g, titulo),
-    },
-  ]);
+  // Pedir ticket e insertar la fila van juntos y en serie: si se separan, dos creaciones
+  // simultáneas se llevan el mismo número.
+  const ticket = await enColaDeTickets(async () => {
+    const t = await siguienteTicket();
+    await api(`/api/v2/tables/${TABLA}/records`, "POST", [
+      {
+        Ticket: t,
+        Nombre: titulo,
+        Estado: ESTADO_LABEL.borrador,
+        "Tipo de pieza": "Social",
+        Origen: "Nuevo",
+        CTA: "valor",
+        "Guión": plantilla.replace(/\{\{\s*title\s*\}\}/g, titulo),
+      },
+    ]);
+    return t;
+  });
   const creado = await obtener(ticket);
   if (!creado) throw new Error("La fila se creó pero no se pudo releer.");
   return creado;
@@ -201,24 +198,26 @@ export async function eliminar(ticket: string): Promise<void> {
 export async function duplicar(ticket: string): Promise<Guion> {
   const orig = await obtener(ticket);
   if (!orig) throw new Error("Guion no encontrado.");
-  const filas = await todas();
-  const nuevo = await siguienteTicket(filas);
-  await api(`/api/v2/tables/${TABLA}/records`, "POST", [
-    {
-      Ticket: nuevo,
-      Nombre: `${orig.titulo} (copia)`,
-      Estado: ESTADO_LABEL.borrador,
-      "Tipo de pieza": "Social",
-      Origen: "Nuevo",
-      Voz: orig.voz || null,
-      Pilar: orig.pilar || null,
-      Plataforma: orig.plataforma || null,
-      "Duración": orig.duracion || null,
-      Persona: orig.persona_audiencia || null,
-      CTA: orig.cta || "valor",
-      "Guión": orig.cuerpo,
-    },
-  ]);
+  const nuevo = await enColaDeTickets(async () => {
+    const t = await siguienteTicket();
+    await api(`/api/v2/tables/${TABLA}/records`, "POST", [
+      {
+        Ticket: t,
+        Nombre: `${orig.titulo} (copia)`,
+        Estado: ESTADO_LABEL.borrador,
+        "Tipo de pieza": "Social",
+        Origen: "Nuevo",
+        Voz: orig.voz || null,
+        Pilar: orig.pilar || null,
+        Plataforma: orig.plataforma || null,
+        "Duración": orig.duracion || null,
+        Persona: orig.persona_audiencia || null,
+        CTA: orig.cta || "valor",
+        "Guión": orig.cuerpo,
+      },
+    ]);
+    return t;
+  });
   const creado = await obtener(nuevo);
   if (!creado) throw new Error("La copia se creó pero no se pudo releer.");
   return creado;
