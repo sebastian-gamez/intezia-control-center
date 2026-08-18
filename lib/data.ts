@@ -405,6 +405,10 @@ export async function duplicateGuion(slug: string): Promise<Guion> {
   return updateGuion(nuevo.slug, patch, cuerpo);
 }
 
-export function dataSource(): "github" | "local" {
+export function dataSource(): "nocodb" | "github" | "local" {
+  // NocoDB primero: es el modo en que corre producción. Antes esta función solo miraba
+  // GITHUB_TOKEN, así que el tablero anunciaba "GitHub" mientras leía la base — y eso
+  // mandó a buscar el problema al sitio equivocado cuando faltaban guiones.
+  if (useNocodb) return "nocodb";
   return useGithub ? "github" : "local";
 }

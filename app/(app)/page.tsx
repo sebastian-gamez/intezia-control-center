@@ -36,7 +36,11 @@ export default async function TableroPage() {
           <p className="text-sm text-slate-400">
             {guiones.length} guiones activos · fuente de datos:{" "}
             <span className={src === "local" ? "text-amber-400" : "text-emerald-400"}>
-              {src === "local" ? "archivos locales (dev)" : "GitHub"}
+              {src === "nocodb"
+                ? "NocoDB"
+                : src === "github"
+                  ? "GitHub"
+                  : "archivos locales (dev)"}
             </span>{" "}
             · arrastra las tarjetas para cambiar la etapa (se refleja en NocoDB)
             {sinTicket > 0 && (
