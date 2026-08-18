@@ -23,7 +23,40 @@ export function nocodbActivo(): boolean {
   return Boolean(BASE && TOKEN && TABLA);
 }
 
-type Fila = Record<string, unknown> & { Id?: number; Ticket?: string };
+/**
+ * Una fila cruda de la tabla `Contenido`. Es parcial a propósito: NocoDB devuelve más
+ * columnas de las que la app usa, y las que usa son estas. Los nombres llevan acento y
+ * espacio porque así se llaman en la tabla.
+ */
+export interface FilaNocodb {
+  Id?: number;
+  Ticket?: string;
+  Nombre?: string;
+  Estado?: string;
+  "Tipo de pieza"?: string;
+  "Slug bóveda"?: string;
+  Origen?: string;
+  "Ref origen"?: string;
+  Voz?: string | null;
+  Pilar?: string | null;
+  Plataforma?: string | null;
+  Formatos?: string | null;
+  "Duración"?: string | null;
+  "Palabras objetivo"?: number | null;
+  Persona?: string | null;
+  Fuente?: string | null;
+  Insight?: string | null;
+  Referencia?: string | null;
+  Responsable?: string | null;
+  "Fecha grabación"?: string | null;
+  "Fecha publicación"?: string | null;
+  CTA?: string | null;
+  "Guión"?: string | null;
+  // El resto de columnas de la tabla, sin fingir que sabemos su tipo.
+  [columna: string]: unknown;
+}
+
+type Fila = FilaNocodb;
 
 async function api(ruta: string, method = "GET", body?: unknown) {
   const r = await fetch(new URL(ruta, BASE), {
@@ -44,13 +77,35 @@ export async function filaPorTicket(ticket: string): Promise<Fila | null> {
   return r?.list?.[0] || null;
 }
 
-/** Siguiente ticket libre (INT-0001, INT-0002…). */
+/**
+ * Siguiente ticket libre (INT-0001, INT-0002…). Única implementación: pide a NocoDB el
+ * mayor y suma uno, sin traerse la tabla entera. Antes había otra versión en
+ * `adaptador-nocodb.ts` que sí descargaba las 261+ filas para lo mismo.
+ */
 export async function siguienteTicket(): Promise<string> {
   const q = new URLSearchParams({ sort: "-Ticket", limit: "1", fields: "Ticket" });
   const r = await api(`/api/v2/tables/${TABLA}/records?${q}`);
   const ultimo = r?.list?.[0]?.Ticket as string | undefined;
   const n = Number(String(ultimo || "").replace(/\D/g, "")) || 0;
   return `INT-${String(n + 1).padStart(4, "0")}`;
+}
+
+/**
+ * Serializa las operaciones que reparten ticket. Entre "leer el mayor" y "escribir la
+ * fila" hay una ventana en la que dos creaciones simultáneas se llevan el mismo número;
+ * pasando por esta cola, la segunda lee después de que la primera ya insertó.
+ *
+ * ponytail: es un cerrojo por instancia. Lo que cierra el agujero de verdad es una
+ * restricción de unicidad sobre `Ticket` en NocoDB, que se configura en NocoDB y no
+ * desde este repo. Esto cubre el caso real (dos personas dando a "Nuevo guion" a la vez
+ * contra la misma instancia); con varias instancias en paralelo sigue haciendo falta la
+ * restricción.
+ */
+let cola: Promise<unknown> = Promise.resolve();
+export function enColaDeTickets<T>(fn: () => Promise<T>): Promise<T> {
+  const siguiente = cola.then(fn, fn);
+  cola = siguiente.catch(() => undefined);
+  return siguiente;
 }
 
 /** Crea la fila de una pieza nueva nacida en el Centro de Control. */

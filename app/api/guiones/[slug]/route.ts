@@ -1,29 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGuion, updateGuion, deleteGuion } from "@/lib/data";
-import type { GuionPatch } from "@/lib/types";
+import { getGuion, updateGuion, deleteGuion, avisoSync } from "@/lib/data";
+import { ErrorDeEntrada, validarCuerpo, validarPatch } from "@/lib/validacion";
+import { slugSeguro } from "@/lib/guion";
+import { log, motivo } from "@/lib/log";
 
-const CAMPOS: (keyof GuionPatch)[] = [
-  "estado",
-  "voz",
-  "plataforma",
-  "pilar",
-  "responsable",
-  "fecha_grabacion",
-  "fecha_produccion",
-  "fecha_publicacion",
-  "cta",
-  "duracion",
-  "palabras_objetivo",
-  "persona_audiencia",
-];
+/** Traduce cualquier fallo a una respuesta: el detalle se queda en el servidor. */
+function fallo(evento: string, e: unknown) {
+  if (e instanceof ErrorDeEntrada)
+    return NextResponse.json({ error: e.message }, { status: 400 });
+  log.error(evento, { motivo: motivo(e) });
+  return NextResponse.json(
+    { error: "Operación fallida. Revisa los logs del servidor." },
+    { status: 500 }
+  );
+}
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const g = await getGuion(params.slug);
-  if (!g) return NextResponse.json({ error: "no encontrado" }, { status: 404 });
-  return NextResponse.json(g);
+  try {
+    const g = await getGuion(slugSeguro(params.slug));
+    if (!g) return NextResponse.json({ error: "no encontrado" }, { status: 404 });
+    return NextResponse.json(g);
+  } catch (e) {
+    return fallo("guiones.leer", e);
+  }
 }
 
 export async function PATCH(
@@ -31,20 +33,13 @@ export async function PATCH(
   { params }: { params: { slug: string } }
 ) {
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const patch: GuionPatch = {};
-  for (const k of CAMPOS) {
-    if (k in body) (patch as Record<string, unknown>)[k] = body[k];
-  }
-  const cuerpo =
-    typeof body.cuerpo === "string" ? (body.cuerpo as string) : undefined;
   try {
-    const updated = await updateGuion(params.slug, patch, cuerpo);
-    return NextResponse.json(updated);
+    const slug = slugSeguro(params.slug);
+    const updated = await updateGuion(slug, validarPatch(body), validarCuerpo(body.cuerpo));
+    // `aviso` cuenta si el guardado llegó también a NocoDB o solo a la bóveda.
+    return NextResponse.json({ ...updated, aviso: avisoSync() });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "error" },
-      { status: 500 }
-    );
+    return fallo("guiones.actualizar", e);
   }
 }
 
@@ -53,12 +48,9 @@ export async function DELETE(
   { params }: { params: { slug: string } }
 ) {
   try {
-    await deleteGuion(params.slug);
+    await deleteGuion(slugSeguro(params.slug));
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "error" },
-      { status: 500 }
-    );
+    return fallo("guiones.eliminar", e);
   }
 }

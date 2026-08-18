@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import type { Guion } from "@/lib/types";
 import { PilarChip } from "./badges";
 import EstadoSelect from "./EstadoSelect";
@@ -8,15 +10,36 @@ import { useGuionModal } from "./GuionModalProvider";
 import { useGuionFilters } from "./GuionFilters";
 import { removeGuion } from "@/lib/api";
 
+/**
+ * Cuántas filas se pintan de golpe. Con 261 piezas y subiendo, pintarlas todas alarga la
+ * página y castiga al navegador para nada: nadie mira la fila 200 sin filtrar antes.
+ *
+ * ponytail: paginación simple del lado cliente. Se descartó virtualizar
+ * (`@tanstack/react-virtual`) porque es una dependencia nueva para una tabla que con
+ * páginas de 50 ya va sobrada. Si algún día hay que ver miles de filas de un tirón, ahí
+ * sí toca virtualizar.
+ */
+const POR_PAGINA = 50;
+
 export default function GuionesTable({ guiones }: { guiones: Guion[] }) {
   const router = useRouter();
   const { open } = useGuionModal();
   const { rows, controls, total, count } = useGuionFilters(guiones);
+  const [pagina, setPagina] = useState(0);
+
+  const paginas = Math.max(1, Math.ceil(rows.length / POR_PAGINA));
+  // Al filtrar, la página en la que estabas puede dejar de existir.
+  useEffect(() => setPagina(0), [count]);
+  const visibles = rows.slice(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA);
 
   async function borrar(slug: string) {
     if (!confirm("¿Eliminar este guion? No se puede deshacer.")) return;
-    await removeGuion(slug);
-    router.refresh();
+    try {
+      await removeGuion(slug);
+      router.refresh();
+    } catch (e) {
+      toast.error(`No se pudo eliminar: ${e instanceof Error ? e.message : "error"}`);
+    }
   }
 
   return (
@@ -43,7 +66,7 @@ export default function GuionesTable({ guiones }: { guiones: Guion[] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((g) => (
+            {visibles.map((g) => (
               <tr
                 key={g.slug}
                 className="group border-t border-line hover:bg-white/[0.03]"
@@ -83,7 +106,7 @@ export default function GuionesTable({ guiones }: { guiones: Guion[] }) {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {visibles.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-3 py-8 text-center text-slate-500">
                   Sin resultados con esos filtros.
@@ -93,6 +116,44 @@ export default function GuionesTable({ guiones }: { guiones: Guion[] }) {
           </tbody>
         </table>
       </div>
+
+      {paginas > 1 && (
+        <div className="mt-3 flex items-center justify-end gap-2 text-sm">
+          <span className="text-slate-400">
+            {pagina * POR_PAGINA + 1}–{Math.min((pagina + 1) * POR_PAGINA, rows.length)} de{" "}
+            {rows.length}
+          </span>
+          <PageBtn onClick={() => setPagina((p) => p - 1)} disabled={pagina === 0}>
+            ← Anterior
+          </PageBtn>
+          <PageBtn
+            onClick={() => setPagina((p) => p + 1)}
+            disabled={pagina >= paginas - 1}
+          >
+            Siguiente →
+          </PageBtn>
+        </div>
+      )}
     </div>
+  );
+}
+
+function PageBtn({
+  onClick,
+  disabled,
+  children,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-lg border border-line px-3 py-1 text-slate-300 hover:bg-white/5 disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }

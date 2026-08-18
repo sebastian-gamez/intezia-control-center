@@ -65,6 +65,18 @@ export function soloHablado(markdown: string): string {
 }
 
 /**
+ * Palabras de un texto en markdown. Se usa contra el presupuesto de palabras habladas,
+ * así que primero hay que pasarlo por `soloHablado`: lo que no se dice no cuenta.
+ */
+export function contarPalabras(texto: string): number {
+  const limpio = texto
+    .replace(/^\s*\|.*\|\s*$/gm, (fila) => fila.replace(/\|/g, " ")) // tablas: solo el texto
+    .replace(/\b\d+\s*-\s*\d+\s*s\b/g, " ") // marcas de tiempo ("0-2 s") de la tabla de beats
+    .replace(/[#>*_`~]/g, " "); // marcas de markdown
+  return (limpio.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length;
+}
+
+/**
  * La tabla de beats tiene 4 columnas: tiempo, nombre del beat, texto a decir y conteo
  * de palabras. Para quien graba solo sirven el tiempo y el texto; el conteo es una
  * herramienta de quien escribe y el nombre del beat es jerga interna.

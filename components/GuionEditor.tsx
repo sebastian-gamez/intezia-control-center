@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import type { Guion } from "@/lib/types";
 import { patchGuion } from "@/lib/api";
 import ProductionFields, { toMetaForm, type MetaForm } from "./ProductionFields";
@@ -19,10 +20,18 @@ export default function GuionEditor({ guion }: { guion: Guion }) {
 
   async function save() {
     setSaving(true);
-    await patchGuion(guion.slug, form);
-    setSaving(false);
-    setSaved(true);
-    router.refresh();
+    try {
+      const r = await patchGuion(guion.slug, form);
+      setSaved(true);
+      // Guardar en la bóveda y guardar TAMBIÉN en NocoDB no son lo mismo: se distingue.
+      if (r.aviso) toast.warning(r.aviso);
+      else toast.success("Guardado y sincronizado con NocoDB");
+      router.refresh();
+    } catch (e) {
+      toast.error(`No se pudo guardar: ${e instanceof Error ? e.message : "error"}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
