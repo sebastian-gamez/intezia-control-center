@@ -40,6 +40,16 @@ export function useGuionFilters(guiones: Guion[]) {
     return true;
   });
 
+  const hayFiltro = Boolean(q || fEstado || fVoz || fPlataforma || fPilar || fResponsable);
+  const limpiar = () => {
+    setQ("");
+    setFEstado("");
+    setFVoz("");
+    setFPlataforma("");
+    setFPilar("");
+    setFResponsable("");
+  };
+
   const controls = (
     <div className="flex flex-wrap items-center gap-2">
       <input
@@ -87,6 +97,16 @@ export function useGuionFilters(guiones: Guion[]) {
           </option>
         ))}
       </FilterSelect>
+      {/* Un filtro activo se veía igual que uno vacío: el tablero mostraba 10 de 118 sin
+          nada que delatara por qué faltaban los otros 108. */}
+      {hayFiltro && (
+        <button
+          onClick={limpiar}
+          className="rounded-lg border border-brand/60 bg-brand/10 px-2.5 py-1.5 text-sm text-brand hover:bg-brand/20"
+        >
+          Limpiar filtros ({guiones.length - rows.length} ocultos)
+        </button>
+      )}
     </div>
   );
 
@@ -108,7 +128,11 @@ function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-lg border border-line bg-ink px-2 py-1.5 text-sm text-slate-200 outline-none focus:border-brand"
+      className={`rounded-lg border px-2 py-1.5 text-sm outline-none focus:border-brand ${
+        value
+          ? "border-brand/60 bg-brand/10 text-brand"
+          : "border-line bg-ink text-slate-200"
+      }`}
     >
       <option value="">{label}: todos</option>
       {children}
