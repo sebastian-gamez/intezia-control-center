@@ -62,7 +62,9 @@ export const VOCES = [
   "CEO",
   "COO",
   "CMO",
+  "CSO",
   "Head of Growth",
+  "Social Media Manager",
   "colaborador",
 ] as const;
 export const PLATAFORMAS = [
