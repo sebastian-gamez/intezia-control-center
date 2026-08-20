@@ -88,6 +88,7 @@ La app desplegada los mostrará al instante (los lee del repo).
 | `NOCODB_TOKEN` | token de NocoDB con permiso sobre la tabla `Contenido` |
 | `NOCODB_CONTENIDO_TABLE_ID` | id de la tabla `Contenido` (se copia de la URL al abrirla) |
 | `NOCODB_LOG_TABLE_ID` | id de `Contenido — Log de etapas` |
+| `DRIVE_GRABACIONES_URL` | carpeta de Drive donde el equipo sube lo que graba. La usa el tab **Grabar**; si falta, avisa en pantalla |
 
 Opcional: `GITHUB_TOKEN` + `GITHUB_OWNER` + `GITHUB_REPO` si quieres que "+ Nuevo guion"
 use la plantilla que vive en la bóveda. Sin eso usa una plantilla de respaldo.
